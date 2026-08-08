@@ -1,0 +1,3 @@
+# 通過 AdSense 審核後，把下面那行的 pub-0000000000000000 換成你自己的發布商 ID，
+# 移除本行註解，commit 後這個檔要能在 https://dengxia.blog/ads.txt 直接開啟。
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

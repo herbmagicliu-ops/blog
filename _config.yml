@@ -1,0 +1,53 @@
+# ===== 燈下 站台設定 =====
+title: 燈下
+tagline: 古典、靈性與生活的閱讀筆記
+description: 燈下——在古文學、靈性成長與時事反思之間，一盞燈下的閱讀與內省筆記。
+author: 四月
+lang: zh-Hant
+url: "https://dengxia.blog"
+baseurl: ""
+
+# 你申請到 Google AdSense 後，把發布商 ID 填進來（形如 ca-pub-1234567890123456）
+# 留空時，全站不會載入任何廣告程式碼。
+adsense_publisher_id: ""
+
+# ===== 建置設定 =====
+markdown: kramdown
+permalink: /:year/:month/:slug/
+timezone: Asia/Taipei
+paginate: 8
+paginate_path: "/page:num/"
+
+include: ["_pages"]
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-paginate
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      ads: true          # 每篇預設顯示廣告，單篇可在 front matter 覆寫為 false
+      affiliate: false    # 單篇含聯盟連結時改成 true，會自動帶出揭露條
+  - scope:
+      path: "_pages"
+    values:
+      layout: page
+
+# ===== 四大分類（改名或併類，動這裡＋各分類頁即可）=====
+categories_nav:
+  - { name: "古文學",         url: "/classical/" }
+  - { name: "靈性探索",       url: "/spiritual/" }
+  - { name: "宗教哲學與修行", url: "/practice/" }
+  - { name: "時事反思",       url: "/current/" }
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor

@@ -1,0 +1,16 @@
+---
+layout: default
+---
+<section class="intro">
+  <p>在古文與今事、信仰與日常之間，點一盞燈，慢慢讀，慢慢想。</p>
+</section>
+
+{% include post-list.html posts=paginator.posts %}
+
+{% if paginator.total_pages > 1 %}
+<nav class="pager" aria-label="分頁">
+  {% if paginator.previous_page %}<a href="{{ paginator.previous_page_path | relative_url }}">← 新的</a>{% endif %}
+  <span>{{ paginator.page }} / {{ paginator.total_pages }}</span>
+  {% if paginator.next_page %}<a href="{{ paginator.next_page_path | relative_url }}">舊的 →</a>{% endif %}
+</nav>
+{% endif %}
