@@ -1,0 +1,14 @@
+<ul class="post-list">
+  {% for post in include.posts %}
+  <li class="post-list__item">
+    <a class="post-list__link" href="{{ post.url | relative_url }}">
+      <div class="post-list__meta">
+        {% if post.category %}<span class="post-list__cat">{{ post.category }}</span>{% endif %}
+        <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y.%m.%d" }}</time>
+      </div>
+      <h2 class="post-list__title">{{ post.title }}</h2>
+      {% if post.excerpt %}<p class="post-list__excerpt">{{ post.excerpt | strip_html | truncate: 90 }}</p>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,10 @@
+<header class="masthead">
+  <div class="lamp-glow" aria-hidden="true"></div>
+  <a class="masthead__title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+  <p class="masthead__tagline">{{ site.tagline }}</p>
+  <nav class="nav" aria-label="主要分類">
+    {% for c in site.categories_nav %}
+      <a href="{{ c.url | relative_url }}">{{ c.name }}</a>
+    {% endfor %}
+  </nav>
+</header>
