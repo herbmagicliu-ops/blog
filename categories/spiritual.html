@@ -1,0 +1,15 @@
+---
+layout: default
+title: 靈性探索
+permalink: /spiritual/
+---
+<section class="cat-head">
+  <h1 class="cat-head__title">靈性探索</h1>
+  <p class="cat-head__subs">新時代與神智學 · 能量療法</p>
+</section>
+{% assign items = site.posts | where: "category", "靈性探索" %}
+{% if items.size > 0 %}
+  {% include post-list.html posts=items %}
+{% else %}
+  <p class="empty">這個分類還在點燈，第一篇快來了。</p>
+{% endif %}
