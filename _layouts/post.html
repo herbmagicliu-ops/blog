@@ -1,0 +1,27 @@
+---
+layout: default
+---
+<article class="post">
+  <header class="post__head">
+    <div class="post__cat">
+      {% if page.category %}<span>{{ page.category }}</span>{% endif %}
+      {% if page.subcategory %}<span class="post__subcat">{{ page.subcategory }}</span>{% endif %}
+    </div>
+    <h1 class="post__title">{{ page.title }}</h1>
+    <time class="post__date" datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y 年 %-m 月 %-d 日" }}</time>
+  </header>
+
+  {% if page.affiliate %}{% include affiliate-notice.html %}{% endif %}
+
+  <div class="post__body">
+    {{ content }}
+  </div>
+
+  {% if page.tags and page.tags.size > 0 %}
+  <div class="post__tags">
+    {% for t in page.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if page.ads %}{% include adsense.html %}{% endif %}
+</article>
