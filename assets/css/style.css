@@ -14,7 +14,8 @@
   --amber:    #C68A2B;   /* 燈光：琥珀金（非陶土）*/
   --amber-lit:#E9B44C;
   --glow:     rgba(233,180,76,.22);
-  --measure:  38rem;     /* 長文閱讀行寬 */
+  --measure:  42rem;     /* 長文閱讀行寬（內文） */
+  --wide:     52rem;     /* 頁面外框寬（列表、頁首、分類頁）*/
 }
 
 *{ box-sizing:border-box; }
@@ -61,7 +62,10 @@ img{ max-width:100%; height:auto; }
 .nav a:hover{ color:var(--amber-lit); border-color:var(--amber); }
 
 /* ---- 主容器 ---- */
-.wrap{ max-width:var(--measure); margin:0 auto; padding:3.2rem 1.25rem 4rem; }
+/* 頁面外框用 --wide（列表、頁首、分類頁在此寬度下比較有份量）；
+   文章／靜態頁／支柱頁的內容再收斂到 --measure，維持好讀的行寬。 */
+.wrap{ max-width:var(--wide); margin:0 auto; padding:3.2rem 1.25rem 4rem; }
+.post, .page, .pillar{ max-width:var(--measure); margin-left:auto; margin-right:auto; }
 
 /* ---- 首頁 ---- */
 .intro{ margin:0 0 2.6rem; padding-bottom:2.2rem; border-bottom:1px solid var(--line); }
@@ -156,6 +160,17 @@ img{ max-width:100%; height:auto; }
 /* ---- 無障礙 ---- */
 a:focus-visible,.nav a:focus-visible{ outline:2px solid var(--amber-lit); outline-offset:3px; border-radius:2px; }
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+
+/* ---- 桌機：放大字級與頁首份量，避免內容看起來太細 ---- */
+@media (min-width:768px){
+  body{ font-size:19px; }
+  .wrap{ padding:3.8rem 1.5rem 4.6rem; }
+  .masthead{ padding:5rem 1.25rem 2.4rem; }
+  .masthead__title{ font-size:clamp(3rem,7vw,4.4rem); }
+}
+@media (min-width:1200px){
+  body{ font-size:20px; line-height:1.95; }
+}
 
 @media (max-width:480px){
   body{ font-size:17px; }
