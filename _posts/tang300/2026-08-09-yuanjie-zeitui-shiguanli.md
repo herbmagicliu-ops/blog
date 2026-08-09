@@ -11,7 +11,7 @@ excerpt: "元結任道州刺史，寫下一首質問官吏的五言古詩：連�
 ads: true
 affiliate: false
 ---
-
+ 
 ## 詩詞本體
 
 <div class="poem">
