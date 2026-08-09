@@ -162,3 +162,21 @@ a:focus-visible,.nav a:focus-visible{ outline:2px solid var(--amber-lit); outlin
   .masthead{ padding-top:3.4rem; }
   .masthead__title{ letter-spacing:.22em; padding-left:.22em; }
 }
+
+/* ===== 主題叢集：支柱頁 + 文末延伸 ===== */
+.pillar__head{ margin-bottom:1.8rem; padding-bottom:1.6rem; border-bottom:2px solid var(--ink); }
+.pillar__eyebrow{ font-family:"Noto Sans TC",sans-serif; font-size:.8rem; letter-spacing:.16em; color:var(--amber); margin-bottom:.6rem; }
+.pillar__title{ margin:0; font-size:clamp(1.7rem,5vw,2.3rem); font-weight:500; line-height:1.5; }
+.pillar__summary{ margin:.9rem 0 0; color:var(--muted); font-size:1.02rem; }
+.pillar__body{ margin:0 0 2.6rem; }
+.pillar__body p{ margin:0 0 1.3rem; }
+.pillar__listtitle{ font-size:1.15rem; font-weight:500; letter-spacing:.04em; margin:0 0 .4rem; padding-top:1.4rem; border-top:1px solid var(--line); }
+
+.cluster{ margin:3rem 0 0; padding:1.4rem 1.3rem; background:var(--paper-2); border:1px solid var(--line); border-radius:8px; }
+.cluster__pillar{ margin:0; font-family:"Noto Sans TC",sans-serif; font-size:.9rem; color:var(--muted); }
+.cluster__pillar a{ color:var(--amber); border-bottom:1px solid var(--amber); }
+.cluster__label{ margin:1rem 0 .5rem; font-family:"Noto Sans TC",sans-serif; font-size:.78rem; letter-spacing:.12em; color:var(--muted); }
+.cluster__list{ list-style:none; margin:0; padding:0; }
+.cluster__list li{ margin:.4rem 0; }
+.cluster__list a{ color:var(--text); border-bottom:1px solid var(--line); }
+.cluster__list a:hover{ color:var(--amber); border-color:var(--amber); }
