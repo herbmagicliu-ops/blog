@@ -23,5 +23,26 @@ layout: default
   </div>
   {% endif %}
 
+  {% comment %} 主題叢集：回連支柱頁 + 同主題延伸 {% endcomment %}
+  {% if page.pillar %}
+    {% assign pillarpage = site.pages | where: "pillar_id", page.pillar | first %}
+    {% assign siblings = site.posts | where: "pillar", page.pillar %}
+    <aside class="cluster">
+      {% if pillarpage %}
+      <p class="cluster__pillar">本文屬於主題：<a href="{{ pillarpage.url | relative_url }}">{{ pillarpage.title }}</a></p>
+      {% endif %}
+      {% if siblings.size > 1 %}
+      <p class="cluster__label">同主題延伸</p>
+      <ul class="cluster__list">
+        {% for r in siblings %}
+          {% unless r.url == page.url %}
+          <li><a href="{{ r.url | relative_url }}">{{ r.title }}</a></li>
+          {% endunless %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </aside>
+  {% endif %}
+
   {% if page.ads %}{% include adsense.html %}{% endif %}
 </article>
