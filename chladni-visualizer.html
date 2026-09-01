@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>聲波幾何 · Chladni Visualizer</title>
+<style>
+  :root{--ink:#e8e6f0;--dim:#8a86a0;--line:#2a2740;--bg:#050409}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Helvetica Neue",system-ui,sans-serif;overflow:hidden}
+  body.checker{background:
+    conic-gradient(#1c1a28 90deg,#0d0c14 0 180deg,#1c1a28 0 270deg,#0d0c14 0) 0 0/26px 26px}
+  canvas{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .row{position:fixed;left:0;right:0;display:flex;align-items:center;gap:15px;
+    padding:12px 18px;flex-wrap:wrap;
+    background:linear-gradient(to top,rgba(5,4,9,.94),rgba(5,4,9,0));
+    backdrop-filter:blur(3px);transition:opacity .4s ease}
+  #panel{bottom:0}
+  #panel.hide{opacity:0;pointer-events:none}
+  .pop{bottom:60px;background:rgba(11,10,20,.96);border-top:1px solid var(--line);
+    display:none;align-items:flex-start}
+  .pop.show{display:flex}
+  .grp{display:flex;align-items:center;gap:8px}
+  .lab{font-size:12px;letter-spacing:.03em;color:var(--dim);white-space:nowrap}
+  button,label.file{font:inherit;font-size:13px;color:var(--ink);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
+    transition:border-color .2s,color .2s}
+  button:hover,label.file:hover{border-color:#5b5686;color:#fff}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.on{border-color:#c06bff;color:#e9c8ff}
+  button.rec{border-color:#ff5a7a;color:#ffb3c1}
+  .chip{padding:6px 12px;font-size:12px;border-radius:8px}
+  input[type=file]{display:none}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:92px;height:3px;
+    background:var(--line);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+    border-radius:50%;background:#c06bff;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;
+    background:#c06bff;cursor:pointer}
+  input[type=color]{width:30px;height:26px;border:1px solid var(--line);border-radius:6px;
+    background:none;cursor:pointer;padding:2px}
+  select{font:inherit;font-size:13px;color:var(--ink);background:#14121f;
+    border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+  .col{display:flex;flex-direction:column;gap:10px}
+  .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+  #hint{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);text-align:center;
+    color:var(--dim);font-size:14px;line-height:1.9;transition:opacity .5s;pointer-events:none}
+  #hint b{color:var(--ink);font-weight:500}
+  #warn{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);color:#ff8a8a;
+    font-size:14px;text-align:center;display:none}
+  code{display:block;white-space:pre-wrap;word-break:break-all;background:#08070f;
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:11.5px;
+    color:#b9d9c0;font-family:ui-monospace,"SFMono-Regular",Menlo,monospace;max-width:520px;line-height:1.6}
+  .note{font-size:11.5px;color:var(--dim);line-height:1.7;max-width:340px}
+  #prog{height:4px;background:var(--line);border-radius:3px;width:220px;overflow:hidden}
+  #prog>i{display:block;height:100%;width:0;background:#c06bff;transition:width .1s}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">載入一首曲子,畫面會跟著聲音變形<br><b>載入音樂</b> ‧ 或按 <b>麥克風</b> 聽環境聲</div>
+<div id="warn">你的瀏覽器不支援 WebGL2,無法執行。</div>
+
+<!-- 配色面板 -->
+<div class="row pop" id="colorPop">
+  <div class="col">
+    <div class="grp">
+      <span class="lab">模式</span>
+      <button id="mAuto" class="chip on">自動循環</button>
+      <button id="mMan" class="chip">手動固定</button>
+      <span class="sep"></span>
+      <span class="lab">色標</span>
+      <input type="color" id="s0" value="#16f0ff">
+      <input type="color" id="s1" value="#6a5bff">
+      <input type="color" id="s2" value="#ff3ea5">
+      <input type="color" id="s3" value="#ffd24a">
+    </div>
+    <div class="grp">
+      <span class="lab">預設</span>
+      <button class="chip pre" data-c="#16f0ff,#6a5bff,#ff3ea5,#ffd24a">參考霓虹</button>
+      <button class="chip pre" data-c="#00e5ff,#2b6bff,#ff5e3a,#ffb800">冰火</button>
+      <button class="chip pre" data-c="#00fff0,#ff00e6,#7a00ff,#00ff85">賽博</button>
+      <button class="chip pre" data-c="#fff2b0,#ffcf5c,#ff9d2e,#ff5e2e">黃金</button>
+      <button class="chip pre" data-c="#d0a3ff,#b388ff,#7c4dff,#4a2b9e">紫幽</button>
+    </div>
+    <div class="grp">
+      <span class="lab">色彩範圍</span><input type="range" id="spread" min="0.3" max="3" step="0.05" value="1.2">
+      <span class="sep"></span>
+      <span class="lab">色相偏移</span><input type="range" id="offset" min="0" max="1" step="0.005" value="0">
+    </div>
+  </div>
+</div>
+
+<!-- 輸出面板 -->
+<div class="row pop" id="exportPop">
+  <div class="col">
+    <div class="grp">
+      <button id="rec">● 開始錄影(即時)</button>
+      <span class="lab" id="recFmt">音訊+畫面,黑底</span>
+      <span class="sep"></span>
+      <label class="grp lab" style="cursor:pointer"><input type="checkbox" id="alpha"> 透明背景預覽</label>
+    </div>
+    <div class="grp">
+      <span class="lab">透明序列匯出</span>
+      <select id="res">
+        <option value="cur">目前視窗</option>
+        <option value="720">720p</option>
+        <option value="1080" selected>1080p</option>
+        <option value="1440">1440p</option>
+        <option value="2160">4K</option>
+      </select>
+      <select id="fps"><option>30</option><option>60</option></select>
+      <button id="expBtn">匯出透明 PNG 序列</button>
+      <div id="prog"><i></i></div>
+      <span class="lab" id="expMsg"></span>
+    </div>
+    <div class="note">
+      透明影片要靠 PNG 序列 + ffmpeg 合成(MP4 沒有透明通道)。匯出後在資料夾裡執行:
+    </div>
+    <code id="cmd"></code>
+  </div>
+</div>
+
+<!-- 主控制列 -->
+<div class="row" id="panel">
+  <div class="grp">
+    <label class="file">載入音樂<input type="file" id="file" accept="audio/*"></label>
+    <button id="play" disabled>播放</button>
+    <button id="mic">麥克風</button>
+  </div>
+  <div class="grp"><span class="lab">靈敏度</span><input type="range" id="sens" min="0.3" max="2.5" step="0.05" value="1.1"></div>
+  <div class="grp"><span class="lab">花瓣</span><input type="range" id="mode" min="3" max="14" step="1" value="7"></div>
+  <div class="grp"><span class="lab">拖尾</span><input type="range" id="trail" min="0.6" max="0.965" step="0.005" value="0.9"></div>
+  <div class="grp"><span class="lab">泛光</span><input type="range" id="bloom" min="0" max="2.2" step="0.05" value="1.3"></div>
+  <span class="sep"></span>
+  <div class="grp"><span class="lab">比例</span>
+    <select id="aspect"><option value="16:9" selected>16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option></select>
+  </div>
+  <button id="btnColor">配色</button>
+  <button id="btnExport">輸出</button>
+</div>
+
+<audio id="au" crossorigin="anonymous"></audio>
+
+<script>
+const cvs=document.getElementById('c');
+const gl=cvs.getContext('webgl2',{antialias:false,alpha:true,premultipliedAlpha:false,preserveDrawingBuffer:true});
+if(!gl){document.getElementById('warn').style.display='block';}
+const cbf=gl&&gl.getExtension('EXT_color_buffer_float');
+const IFMT=cbf?gl.RGBA16F:gl.RGBA8, TYPE=cbf?gl.HALF_FLOAT:gl.UNSIGNED_BYTE;
+
+/* ================= 著色器 ================= */
+const VS=`#version 300 es
+layout(location=0) in vec2 p; out vec2 vUv;
+void main(){ vUv=p*0.5+0.5; gl_Position=vec4(p,0.0,1.0); }`;
+
+const FS_ACCUM=`#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 frag;
+uniform vec2 uRes; uniform float uTime;
+uniform float uBass,uMid,uTreble,uLevel,uSens,uMode,uOffset,uSpread,uDecay;
+uniform vec3 uS0,uS1,uS2,uS3;
+uniform sampler2D uPrev;
+vec3 grad(float x){                       // 四色標漸層,會環繞 → 多色同框
+  x=fract(x)*4.0; int i=int(floor(x)); float f=smoothstep(0.0,1.0,fract(x));
+  vec3 c[4]=vec3[4](uS0,uS1,uS2,uS3);
+  return mix(c[i%4],c[(i+1)%4],f);
+}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-0.5*uRes)/min(uRes.x,uRes.y);
+  float t=uTime, lvl=clamp(uLevel*uSens,0.0,1.5);
+  uv+=0.10*uBass*uSens*vec2(sin(uv.y*3.0+t*0.7),cos(uv.x*3.0+t*0.6)); // domain warp
+  float r=length(uv), ang=atan(uv.y,uv.x);
+  float m1=uMode+floor(uBass*6.0*uSens), m2=m1+3.0;   // 低頻→花瓣
+  float k1=11.0+uMid*12.0*uSens, k2=17.0+uTreble*16.0*uSens; // 中/高→環與細節
+  float rot=t*0.12+lvl*1.6;
+  float f1=cos(m1*(ang+rot))*cos(k1*r-t*0.8);
+  float f2=cos(m2*(ang-rot*0.6))*cos(k2*r-t*1.15);
+  float field=f1+0.8*f2;
+  float glow=pow(0.016/(abs(field)+0.02),1.25);
+  glow*=smoothstep(1.15,0.12,r); glow*=0.45+1.5*lvl;
+  vec3 cur=grad(uOffset + r*uSpread + field*0.06)*glow; // 色相座標
+  cur*=smoothstep(0.03,0.12,r);
+  vec2 s=vUv-0.5; float dr=0.003; mat2 rm=mat2(cos(dr),-sin(dr),sin(dr),cos(dr));
+  s=rm*s*0.996+0.5;
+  vec3 prev=texture(uPrev,s).rgb*uDecay;
+  frag=vec4(cur+prev,1.0);
+}`;
+
+const FS_BRIGHT=`#version 300 es
+precision highp float; in vec2 vUv; out vec4 frag; uniform sampler2D uSrc;
+void main(){ vec3 c=texture(uSrc,vUv).rgb; float b=max(c.r,max(c.g,c.b));
+  frag=vec4(c*smoothstep(0.55,1.3,b),1.0); }`;
+
+const FS_BLUR=`#version 300 es
+precision highp float; in vec2 vUv; out vec4 frag; uniform sampler2D uSrc; uniform vec2 uDir;
+void main(){ float w[5]=float[](0.227,0.194,0.121,0.054,0.016);
+  vec3 s=texture(uSrc,vUv).rgb*w[0];
+  for(int i=1;i<5;i++){ s+=texture(uSrc,vUv+uDir*float(i)).rgb*w[i];
+    s+=texture(uSrc,vUv-uDir*float(i)).rgb*w[i]; } frag=vec4(s,1.0); }`;
+
+const FS_COMP=`#version 300 es
+precision highp float; in vec2 vUv; out vec4 frag;
+uniform sampler2D uScene,uBloom; uniform float uLevel,uBloomAmt,uAlpha;
+void main(){
+  vec2 uv=vUv, d=uv-0.5; float ab=0.003+0.012*uLevel;
+  vec3 sc,bl;
+  sc.r=texture(uScene,uv+d*ab).r; sc.g=texture(uScene,uv).g; sc.b=texture(uScene,uv-d*ab).b;
+  bl.r=texture(uBloom,uv+d*ab).r; bl.g=texture(uBloom,uv).g; bl.b=texture(uBloom,uv-d*ab).b;
+  vec3 col=sc+bl*uBloomAmt;
+  col=col/(1.0+col); col=pow(col,vec3(0.85));         // tonemap
+  float a=mix(1.0, clamp(max(max(col.r,col.g),col.b),0.0,1.0), uAlpha); // 透明模式:亮度當 alpha
+  frag=vec4(col,a);
+}`;
+
+/* ================= GL 工具 ================= */
+function mkProg(fs){
+  const c=(t,src)=>{const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;};
+  const p=gl.createProgram(); gl.attachShader(p,c(gl.VERTEX_SHADER,VS)); gl.attachShader(p,c(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(p));
+  p._u={}; p.u=n=>{ if(!(n in p._u)) p._u[n]=gl.getUniformLocation(p,n); return p._u[n]; }; return p;
+}
+function mkTarget(w,h){
+  const tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,IFMT,w,h,0,gl.RGBA,TYPE,null);
+  for(const [k,v] of [['MIN','LINEAR'],['MAG','LINEAR']]) gl.texParameteri(gl.TEXTURE_2D,gl['TEXTURE_'+k+'_FILTER'],gl[v]);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const fbo=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  return {tex,fbo,w,h};
+}
+let P_ACC,P_BR,P_BL,P_CO,fb=[],bl0,bl1,pp=0;
+if(gl){
+  const vbo=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  P_ACC=mkProg(FS_ACCUM); P_BR=mkProg(FS_BRIGHT); P_BL=mkProg(FS_BLUR); P_CO=mkProg(FS_COMP);
+  gl.useProgram(P_ACC); gl.uniform1i(P_ACC.u('uPrev'),0);
+  gl.useProgram(P_BR); gl.uniform1i(P_BR.u('uSrc'),0);
+  gl.useProgram(P_BL); gl.uniform1i(P_BL.u('uSrc'),0);
+  gl.useProgram(P_CO); gl.uniform1i(P_CO.u('uScene'),0); gl.uniform1i(P_CO.u('uBloom'),1);
+}
+function bind(t){ gl.bindFramebuffer(gl.FRAMEBUFFER,t?t.fbo:null);
+  gl.viewport(0,0,t?t.w:cvs.width,t?t.h:cvs.height); }
+const draw=()=>gl.drawArrays(gl.TRIANGLES,0,3);
+const u1=(p,n,v)=>gl.uniform1f(p.u(n),v);
+
+function buildTargets(w,h){
+  fb=[mkTarget(w,h),mkTarget(w,h)];
+  const bw=Math.max(2,w>>1),bh=Math.max(2,h>>1); bl0=mkTarget(bw,bh); bl1=mkTarget(bw,bh);
+  gl.clearColor(0,0,0,0);
+  bind(fb[0]);gl.clear(gl.COLOR_BUFFER_BIT); bind(fb[1]);gl.clear(gl.COLOR_BUFFER_BIT);
+}
+let exporting=false, aspect=16/9;
+function fitBox(aw,ah,asp){ let w=aw,h=w/asp; if(h>ah){h=ah;w=h*asp;} return [Math.round(w),Math.round(h)]; }
+function resize(){
+  if(exporting) return;
+  const dpr=Math.min(devicePixelRatio||1,1.5);
+  const [bw,bh]=fitBox(innerWidth,innerHeight,aspect);
+  cvs.style.width=bw+'px'; cvs.style.height=bh+'px';
+  cvs.width=Math.round(bw*dpr); cvs.height=Math.round(bh*dpr);
+  if(gl) buildTargets(cvs.width,cvs.height);
+}
+addEventListener('resize',resize); resize();
+
+/* ================= 核心渲染(即時與匯出共用) ================= */
+const SPREAD=1.5;
+function renderScene(p){
+  const prev=fb[pp], cur=fb[1-pp];
+  bind(cur); gl.useProgram(P_ACC);
+  gl.uniform2f(P_ACC.u('uRes'),cvs.width,cvs.height);
+  u1(P_ACC,'uTime',p.t); u1(P_ACC,'uBass',p.bass); u1(P_ACC,'uMid',p.mid);
+  u1(P_ACC,'uTreble',p.treble); u1(P_ACC,'uLevel',Math.min(p.level,1.3));
+  u1(P_ACC,'uSens',p.sens); u1(P_ACC,'uMode',p.mode);
+  u1(P_ACC,'uOffset',p.offset); u1(P_ACC,'uSpread',p.spread); u1(P_ACC,'uDecay',p.decay);
+  gl.uniform3fv(P_ACC.u('uS0'),p.stops[0]); gl.uniform3fv(P_ACC.u('uS1'),p.stops[1]);
+  gl.uniform3fv(P_ACC.u('uS2'),p.stops[2]); gl.uniform3fv(P_ACC.u('uS3'),p.stops[3]);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,prev.tex); draw();
+
+  bind(bl0); gl.useProgram(P_BR);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,cur.tex); draw();
+
+  gl.useProgram(P_BL);
+  const H=[SPREAD/bl0.w,0],V=[0,SPREAD/bl0.h];
+  for(let i=0;i<2;i++){
+    bind(bl1); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,bl0.tex);
+    gl.uniform2f(P_BL.u('uDir'),H[0],H[1]); draw();
+    bind(bl0); gl.bindTexture(gl.TEXTURE_2D,bl1.tex);
+    gl.uniform2f(P_BL.u('uDir'),V[0],V[1]); draw();
+  }
+  bind(null); gl.useProgram(P_CO);
+  u1(P_CO,'uLevel',Math.min(p.level,1.3)); u1(P_CO,'uBloomAmt',p.bloom); u1(P_CO,'uAlpha',p.alpha?1:0);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,cur.tex);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,bl0.tex); draw();
+  pp=1-pp;
+}
+
+/* ================= Web Audio ================= */
+let AC,analyser,freq,time,srcNode,recDest,micSrc,micStream=null;
+function ensureAudio(){
+  if(AC)return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=AC.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.75;
+  freq=new Uint8Array(analyser.frequencyBinCount); time=new Uint8Array(analyser.fftSize);
+  analyser.connect(AC.destination);
+  recDest=AC.createMediaStreamDestination();
+}
+const au=document.getElementById('au');
+function connectElement(){ ensureAudio(); if(srcNode)return;
+  srcNode=AC.createMediaElementSource(au); srcNode.connect(analyser); srcNode.connect(recDest); }
+
+let sm={bass:0,mid:0,treble:0,level:0,hue:0};
+function readAudio(){
+  if(!analyser)return sm;
+  analyser.getByteFrequencyData(freq); analyser.getByteTimeDomainData(time);
+  const N=freq.length;
+  const band=(a,b)=>{let s=0,c=0;for(let i=(a*N)|0;i<((b*N)|0);i++){s+=freq[i];c++;}return c?s/c/255:0;};
+  const bass=band(0,0.06),mid=band(0.06,0.25),treble=band(0.25,0.65);
+  let num=0,den=0; for(let i=0;i<N;i++){num+=i*freq[i];den+=freq[i];}
+  const cen=den>0?(num/den)/N:0;
+  let rms=0; for(let i=0;i<time.length;i++){const v=(time[i]-128)/128;rms+=v*v;} rms=Math.sqrt(rms/time.length);
+  const k=0.18;
+  sm.bass+=(bass-sm.bass)*k; sm.mid+=(mid-sm.mid)*k; sm.treble+=(treble-sm.treble)*k;
+  sm.level+=(rms*2.2-sm.level)*k; sm.hue+=(cen-sm.hue)*0.08;
+  return sm;
+}
+
+/* ================= 狀態與參數 ================= */
+let sens=1.1,baseMode=7,decay=0.9,bloomAmt=1.3;
+let colorMode='auto', manualOffset=0, spreadVal=1.2, alphaOn=false;
+let stops=[[.086,.941,1],[.416,.357,1],[1,.243,.647],[1,.824,.29]];
+const hex2rgb=h=>{h=h.replace('#','');return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];};
+function readStops(){ stops=['s0','s1','s2','s3'].map(id=>hex2rgb($(id).value)); }
+
+let start=performance.now();
+function liveParams(now){
+  const a=readAudio(), t=(now-start)/1000;
+  const offset = colorMode==='auto' ? (a.hue*1.2+t*0.02) : manualOffset;
+  return {t,bass:a.bass,mid:a.mid,treble:a.treble,level:a.level,hue:a.hue,
+    sens,mode:baseMode,decay,bloom:bloomAmt,offset,spread:spreadVal,stops,alpha:alphaOn};
+}
+function loop(now){
+  if(gl&&!exporting) renderScene(liveParams(now));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ================= 即時錄影(MP4 / WebM,含音訊,黑底) ================= */
+let recorder=null,recChunks=[],recMime='';
+function pickMime(){
+  const c=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4',
+           'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  for(const m of c) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+$('rec').onclick=()=>{
+  if(recorder){ recorder.stop(); return; }
+  ensureAudio();
+  recMime=pickMime(); if(!recMime){ $('recFmt').textContent='此瀏覽器不支援錄影'; return; }
+  const vtrack=cvs.captureStream(60).getVideoTracks();
+  const atrack=recDest?recDest.stream.getAudioTracks():[];
+  const stream=new MediaStream([...vtrack,...atrack]);
+  recChunks=[]; recorder=new MediaRecorder(stream,{mimeType:recMime,videoBitsPerSecond:12_000_000});
+  recorder.ondataavailable=e=>{ if(e.data.size)recChunks.push(e.data); };
+  recorder.onstop=()=>{
+    const ext=recMime.includes('mp4')?'mp4':'webm';
+    const blob=new Blob(recChunks,{type:recMime});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='chladni.'+ext; a.click();
+    $('rec').textContent='● 開始錄影(即時)'; $('rec').classList.remove('rec');
+    recorder=null;
+  };
+  recorder.start();
+  $('rec').textContent='■ 停止並下載'; $('rec').classList.add('rec');
+  $('recFmt').textContent='錄製中 · '+(recMime.includes('mp4')?'MP4':'WebM');
+};
+
+/* ================= 離線透明匯出:FFT 分析 → 逐格透明 PNG ================= */
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){ let bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit;
+    if(i<j){ const tr=re[i];re[i]=re[j];re[j]=tr; const ti=im[i];im[i]=im[j];im[j]=ti; } }
+  for(let len=2;len<=n;len<<=1){ const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){ let cr=1,ci=0;
+      for(let k=0;k<len>>1;k++){ const a=i+k,b=a+(len>>1);
+        const vr=re[b]*cr-im[b]*ci, vi=re[b]*ci+im[b]*cr;
+        re[b]=re[a]-vr; im[b]=im[a]-vi; re[a]+=vr; im[a]+=vi;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr; } } }
+}
+function precompute(buf,fps){
+  const sr=buf.sampleRate,n=buf.length,ch=buf.numberOfChannels;
+  const mono=new Float32Array(n);
+  for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)mono[i]+=d[i]/ch;}
+  const W=2048,half=W>>1;
+  const hann=new Float32Array(W); for(let i=0;i<W;i++)hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(W-1));
+  const frames=Math.max(1,Math.floor(buf.duration*fps));
+  const o={frames,dur:buf.duration,bass:new Float32Array(frames),mid:new Float32Array(frames),
+    treble:new Float32Array(frames),level:new Float32Array(frames),hue:new Float32Array(frames)};
+  const re=new Float32Array(W),im=new Float32Array(W);
+  for(let f=0;f<frames;f++){
+    const c0=Math.floor(f/fps*sr)-half; let rms=0;
+    for(let i=0;i<W;i++){const idx=c0+i;const v=(idx>=0&&idx<n)?mono[idx]:0;re[i]=v*hann[i];im[i]=0;rms+=v*v;}
+    rms=Math.sqrt(rms/W); fft(re,im);
+    const bv=(a,b)=>{let s=0,c=0;for(let k=(a*half)|0;k<((b*half)|0);k++){
+      const mag=Math.hypot(re[k],im[k])/W; let db=20*Math.log10(mag+1e-7);
+      let val=(db+100)/70; val=val<0?0:val>1?1:val; s+=val;c++;} return c?s/c:0;};
+    o.bass[f]=bv(0,0.06); o.mid[f]=bv(0.06,0.25); o.treble[f]=bv(0.25,0.65); o.level[f]=Math.min(rms*2.2,1.3);
+    let num=0,den=0; for(let k=0;k<half;k++){const m=Math.hypot(re[k],im[k]);num+=k*m;den+=m;}
+    o.hue[f]=den>0?(num/den)/half:0;
+  }
+  const smf=(arr,k)=>{for(let f=1;f<frames;f++)arr[f]=arr[f-1]+(arr[f]-arr[f-1])*k;};
+  smf(o.bass,.35);smf(o.mid,.35);smf(o.treble,.35);smf(o.level,.35);smf(o.hue,.12);
+  return o;
+}
+const blobOf=()=>new Promise(r=>cvs.toBlob(r,'image/png'));
+function loadJSZip(){return new Promise((res,rej)=>{ if(window.JSZip)return res(window.JSZip);
+  const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  s.onload=()=>res(window.JSZip); s.onerror=rej; document.head.appendChild(s); });}
+
+let curFile=null;
+async function exportSeq(){
+  if(!curFile){ $('expMsg').textContent='請先「載入音樂」檔案'; return; }
+  ensureAudio();
+  const fps=+$('fps').value;
+  let W,H; const rv=$('res').value;
+  if(rv==='cur'){ W=cvs.width; H=cvs.height; }
+  else{ const tier=+rv;                      // tier = 短邊像素
+    if(aspect>=1){ H=tier; W=Math.round(tier*aspect); } else { W=tier; H=Math.round(tier/aspect); } }
+  W-=W&1; H-=H&1;                            // H.264/ffmpeg 需要偶數尺寸
+
+  $('expMsg').textContent='解碼音訊…';
+  const ab=await curFile.arrayBuffer();
+  const buf=await AC.decodeAudioData(ab.slice(0));
+  $('expMsg').textContent='分析頻譜…';
+  const F=await new Promise(r=>setTimeout(()=>r(precompute(buf,fps)),20));
+
+  // 準備輸出目的地
+  let dir=null,zip=null;
+  if('showDirectoryPicker' in window){
+    try{ dir=await window.showDirectoryPicker(); }catch(e){ $('expMsg').textContent='已取消'; return; }
+  }else{
+    if(F.frames>240 && !confirm('此瀏覽器只能打包成 ZIP,'+F.frames+' 格可能很大且吃記憶體。繼續?')){ $('expMsg').textContent='已取消'; return; }
+    const JSZip=await loadJSZip(); zip=new JSZip();
+  }
+
+  exporting=true; au.pause(); playBtn.textContent='播放';
+  cvs.width=W; cvs.height=H; buildTargets(W,H); pp=0;
+  const bar=$('prog').firstElementChild;
+
+  for(let f=0;f<F.frames;f++){
+    renderScene({t:f/fps,bass:F.bass[f],mid:F.mid[f],treble:F.treble[f],level:F.level[f],hue:F.hue[f],
+      sens,mode:baseMode,decay,bloom:bloomAmt,
+      offset: colorMode==='auto'?(F.hue[f]*1.2+f/fps*0.02):manualOffset,
+      spread:spreadVal,stops,alpha:true});
+    const blob=await blobOf();
+    const name='frame_'+String(f).padStart(5,'0')+'.png';
+    if(dir){ const fh=await dir.getFileHandle(name,{create:true}); const ws=await fh.createWritable(); await ws.write(blob); await ws.close(); }
+    else{ zip.file(name,blob); }
+    if(f%3===0){ bar.style.width=(f/F.frames*100)+'%'; $('expMsg').textContent='輸出 '+f+' / '+F.frames; await new Promise(r=>setTimeout(r)); }
+  }
+  if(zip){ $('expMsg').textContent='打包 ZIP…';
+    const out=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(out); a.download='chladni_frames.zip'; a.click(); }
+  bar.style.width='100%'; $('expMsg').textContent='完成 · '+F.frames+' 格 @ '+fps+'fps';
+
+  exporting=false; resize(); pp=0;
+  updateCmd(fps);
+}
+function updateCmd(fps){
+  const ff=fps||+$('fps').value;
+  $('cmd').textContent=
+`# 透明 ProRes 4444(.mov,剪輯保留透明,首選)
+ffmpeg -framerate ${ff} -i frame_%05d.png -i 你的音樂.mp3 \\
+  -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le -c:a aac -shortest out.mov
+
+# 透明 WebM(VP9,檔案小、可上網)
+ffmpeg -framerate ${ff} -i frame_%05d.png -c:v libvpx-vp9 -pix_fmt yuva420p out.webm
+
+# 一般黑底 MP4(要壓在黑底上時用)
+ffmpeg -framerate ${ff} -i frame_%05d.png -i 你的音樂.mp3 \\
+  -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -shortest out.mp4`;
+}
+
+/* ================= UI 綁定 ================= */
+function $(id){return document.getElementById(id);}
+const playBtn=$('play'),micBtn=$('mic'),hintEl=$('hint'),panel=$('panel');
+$('sens').oninput=e=>sens=+e.target.value;
+$('mode').oninput=e=>baseMode=+e.target.value;
+$('trail').oninput=e=>decay=+e.target.value;
+$('bloom').oninput=e=>bloomAmt=+e.target.value;
+$('spread').oninput=e=>spreadVal=+e.target.value;
+$('offset').oninput=e=>manualOffset=+e.target.value;
+['s0','s1','s2','s3'].forEach(id=>$(id).oninput=readStops);
+$('mAuto').onclick=()=>{colorMode='auto';$('mAuto').classList.add('on');$('mMan').classList.remove('on');};
+$('mMan').onclick=()=>{colorMode='manual';$('mMan').classList.add('on');$('mAuto').classList.remove('on');};
+document.querySelectorAll('.pre').forEach(b=>b.onclick=()=>{
+  const cs=b.dataset.c.split(','); cs.forEach((c,i)=>$('s'+i).value=c); readStops(); });
+$('alpha').onchange=e=>{ alphaOn=e.target.checked; document.body.classList.toggle('checker',alphaOn); };
+$('btnColor').onclick=()=>{ $('colorPop').classList.toggle('show'); $('exportPop').classList.remove('show'); };
+$('btnExport').onclick=()=>{ $('exportPop').classList.toggle('show'); $('colorPop').classList.remove('show'); updateCmd(); };
+$('expBtn').onclick=()=>exportSeq();
+$('fps').onchange=()=>updateCmd();
+$('aspect').onchange=e=>{ const [a,b]=e.target.value.split(':').map(Number); aspect=a/b; resize(); };
+
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return; curFile=f;
+  stopMic(); au.src=URL.createObjectURL(f); connectElement(); AC.resume(); au.play();
+  playBtn.disabled=false; playBtn.textContent='暫停'; hintEl.style.opacity=0;};
+playBtn.onclick=()=>{ if(au.paused){au.play();playBtn.textContent='暫停';} else{au.pause();playBtn.textContent='播放';} };
+
+async function stopMic(){ if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;} micBtn.classList.remove('on'); }
+micBtn.onclick=async()=>{
+  if(micStream){stopMic();return;}
+  try{ ensureAudio(); micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    micSrc=AC.createMediaStreamSource(micStream); micSrc.connect(analyser); micSrc.connect(recDest);
+    AC.resume(); micBtn.classList.add('on'); au.pause(); playBtn.textContent='播放'; hintEl.style.opacity=0;
+  }catch(err){ micBtn.textContent='麥克風不可用'; setTimeout(()=>micBtn.textContent='麥克風',1800); }
+};
+readStops();
+
+let idle;
+function poke(){ panel.classList.remove('hide'); clearTimeout(idle);
+  idle=setTimeout(()=>{ if((!au.paused||micStream)&&!$('colorPop').classList.contains('show')&&!$('exportPop').classList.contains('show')) panel.classList.add('hide'); },2800); }
+addEventListener('mousemove',poke); addEventListener('touchstart',poke); poke();
+</script>
+</body>
+</html>
